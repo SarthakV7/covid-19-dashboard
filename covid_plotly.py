@@ -1,81 +1,120 @@
+from concurrent.futures import ThreadPoolExecutor
 import dash
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from data_functions import *
+import time
+import wget
+import os
 
 # external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP],
                 meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}])
 
+
+def define_variables(df_confirmed, df_recovered, df_deaths):
+    global df_rec
+    global df_con
+    global df_dea
+    global df_act
+    global confirmed
+    global recovered
+    global active
+    global deaths
+    global total_confirmed
+    global total_recovered
+    global total_deaths
+    global total_active
+    global change_confirmed
+    global change_recovered
+    global change_deaths
+    global change_active
+    global active_rate
+    global recovery_rate
+    global mortality_rate
+    global cases_per_million
+    df_confirmed.drop(['Province/State', 'Lat', 'Long'], axis=1, inplace=True)
+    df_confirmed.rename(columns={'Country/Region': 'Country'}, inplace=True)
+    df_recovered.drop(['Province/State', 'Lat', 'Long'], axis=1, inplace=True)
+    df_recovered.rename(columns={'Country/Region': 'Country'}, inplace=True)
+    df_deaths.drop(['Province/State', 'Lat', 'Long'], axis=1, inplace=True)
+    df_deaths.rename(columns={'Country/Region': 'Country'}, inplace=True)
+    df_rec = merge_countries(df_recovered).sort_values(by='Country')
+    df_con = merge_countries(df_confirmed).sort_values(by='Country')
+    df_dea = merge_countries(df_deaths).sort_values(by='Country')
+    df_act = df_con.copy()
+    df_act[df_act.columns[1:]] = df_con.values[:, 1:] - (df_rec.values[:, 1:] + df_dea.values[:, 1:])
+    confirmed = date_wise(df_con.sum(axis=0))
+    recovered = date_wise(df_rec.sum(axis=0))
+    active = date_wise(df_act.sum(axis=0))
+    deaths = date_wise(df_dea.sum(axis=0))
+    total_confirmed = confirmed.Value.iloc[-1]
+    total_recovered = recovered.Value.iloc[-1]
+    total_deaths = deaths.Value.iloc[-1]
+    total_active = total_confirmed - total_recovered + total_deaths
+    change_confirmed = confirmed.Value.iloc[-1] - confirmed.Value.iloc[-2]
+    change_recovered = recovered.Value.iloc[-1] - recovered.Value.iloc[-2]
+    change_deaths = deaths.Value.iloc[-1] - deaths.Value.iloc[-2]
+    change_active = change_confirmed - change_recovered + change_deaths
+    if change_active >= 0:
+        change_active = f'+{change_active:,}'
+    else:
+        change_active = f'-{-change_active:,}'
+    if change_confirmed >= 0:
+        change_confirmed = f'+{change_confirmed:,}'
+    else:
+        change_confirmed = f'-{-change_confirmed:,}'
+    if change_recovered >= 0:
+        change_recovered = f'+{change_recovered:,}'
+    else:
+        change_recovered = f'-{-change_recovered:,}'
+    if change_deaths >= 0:
+        change_deaths = f'+{change_deaths:,}'
+    else:
+        change_deaths = f'-{-change_deaths:,}'
+    active_rate = 100 * total_active / total_confirmed
+    recovery_rate = 100 * total_recovered / (total_confirmed)
+    mortality_rate = 100 * total_deaths / (total_confirmed)
+    cases_per_million = 1e6 * total_confirmed / 7796127694
+
+# getting data periodically
+def update_data(period=4):
+  while True:
+    os.remove('data/time_series_covid19_confirmed_global.csv')
+    wget.download('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv','./data')
+    global df_confirmed
+    df_confirmed = pd.read_csv('data/time_series_covid19_confirmed_global.csv')
+
+    os.remove('data/time_series_covid19_recovered_global.csv')
+    wget.download('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv','./data')
+    global df_recovered
+    df_recovered = pd.read_csv('data/time_series_covid19_recovered_global.csv')
+
+    os.remove('data/time_series_covid19_deaths_global.csv')
+    wget.download('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv','./data')
+    global df_deaths
+    df_deaths = pd.read_csv('data/time_series_covid19_deaths_global.csv')
+
+    time.sleep(period*60)
+    # print('updating data...')
+    define_variables(df_confirmed, df_recovered, df_deaths)
+
+
+if 'time_series_covid19_confirmed_global.csv' not in os.listdir('./data'):
+    wget.download('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv', './data')
+if 'time_series_covid19_recovered_global.csv' not in os.listdir('./data'):
+    wget.download('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv', './data')
+if 'time_series_covid19_deaths_global.csv' not in os.listdir('./data'):
+    wget.download('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv', './data')
+
 # importing data
-df_confirmed = pd.read_csv('data/time_series_covid_19_confirmed.csv')
-df_confirmed.drop(['Province/State', 'Lat', 'Long'], axis=1, inplace=True)
-df_confirmed.rename(columns={'Country/Region':'Country'}, inplace=True)
+df_confirmed = pd.read_csv('data/time_series_covid19_confirmed_global.csv')
+df_recovered = pd.read_csv('data/time_series_covid19_recovered_global.csv')
+df_deaths = pd.read_csv('data/time_series_covid19_deaths_global.csv')
+define_variables(df_confirmed, df_recovered, df_deaths)
 
-df_recovered = pd.read_csv('data/time_series_covid_19_recovered.csv')
-df_recovered.drop(['Province/State', 'Lat', 'Long'], axis=1, inplace=True)
-df_recovered.rename(columns={'Country/Region':'Country'}, inplace=True)
-
-df_deaths = pd.read_csv('data/time_series_covid_19_deaths.csv')
-df_deaths.drop(['Province/State', 'Lat', 'Long'], axis=1, inplace=True)
-df_deaths.rename(columns={'Country/Region':'Country'}, inplace=True)
-
-# cleaned data
-df_rec = merge_countries(df_recovered).sort_values(by='Country')
-df_con = merge_countries(df_confirmed).sort_values(by='Country')
-df_dea = merge_countries(df_deaths).sort_values(by='Country')
-
-df_act = df_con.copy()
-df_act[df_act.columns[1:]] = df_con.values[:,1:] - (df_rec.values[:,1:] + df_dea.values[:,1:])
-df_act.head(2)
-
-
-confirmed = date_wise(df_con.sum(axis=0))
-recovered = date_wise(df_rec.sum(axis=0))
-active = date_wise(df_act.sum(axis=0))
-deaths = date_wise(df_dea.sum(axis=0))
-deaths.head(3)
-
-# total cases
-total_confirmed = confirmed.Value.iloc[-1]
-total_recovered = recovered.Value.iloc[-1]
-total_deaths = deaths.Value.iloc[-1]
-total_active = total_confirmed - total_recovered + total_deaths
-
-# daily change
-change_confirmed = confirmed.Value.iloc[-1] - confirmed.Value.iloc[-2]
-change_recovered = recovered.Value.iloc[-1] - recovered.Value.iloc[-2]
-change_deaths = deaths.Value.iloc[-1] - deaths.Value.iloc[-2]
-change_active = change_confirmed - change_recovered + change_deaths
-
-if change_active >= 0:
-    change_active = f'+{change_active:,}'
-else:
-    change_active = f'-{-change_active:,}'
-
-if change_confirmed >= 0:
-    change_confirmed = f'+{change_confirmed:,}'
-else:
-    change_confirmed = f'-{-change_confirmed:,}'
-
-if change_recovered >= 0:
-    change_recovered = f'+{change_recovered:,}'
-else:
-    change_recovered = f'-{-change_recovered:,}'
-
-if change_deaths >= 0:
-    change_deaths = f'+{change_deaths:,}'
-else:
-    change_deaths = f'-{-change_deaths:,}'
-
-
-# rates
-active_rate = 100*total_active/total_confirmed
-recovery_rate = 100*total_recovered/(total_confirmed)
-mortality_rate = 100*total_deaths/(total_confirmed)
-cases_per_million = 1e6*total_confirmed/7796127694
 
 # cards
 card_1 = dbc.Card([
@@ -91,7 +130,7 @@ card_2 = dbc.Card([
         dbc.CardBody([
                 html.H6("Recovered", className='card_title'),
                 html.H5(f"{change_recovered}", className='card_changed'),
-                html.H5(f"{total_confirmed:,}", className='card_value')
+                html.H5(f"{total_recovered:,}", className='card_value')
                 ], className='card_2_body')], className='card_2')
 
 card_3 = dbc.Card([
@@ -99,7 +138,7 @@ card_3 = dbc.Card([
         dbc.CardBody([
                 html.H6("Deceased", className='card_title'),
                 html.H5(f"{change_deaths}", className='card_changed'),
-                html.H5(f"{total_confirmed:,}", className='card_value')
+                html.H5(f"{total_deaths:,}", className='card_value')
                 ], className='card_3_body')], className='card_3')
 
 card_4 = dbc.Card([
@@ -107,7 +146,7 @@ card_4 = dbc.Card([
         dbc.CardBody([
                 html.H6("Active", className='card_title'),
                 html.H5(f"{change_active}", className='card_changed'),
-                html.H5(f"{total_confirmed:,}", className='card_value')
+                html.H5(f"{total_active:,}", className='card_value')
                 ], className='card_4_body')], className='card_4')
 
 option_card = dbc.Card([
@@ -115,25 +154,25 @@ option_card = dbc.Card([
                                              className='option_card_body_5'),
                                              className='option_card_row_5'),
 
-                    dbc.Row([dbc.Col(html.Img(src="assets/images/confirm_rate.png",
+                    dbc.Row([dbc.Col(html.Img(src="assets/images/confirm.png",
                                               className='option_card_img_1'), width=4),
-                            dbc.Col(html.H6(f"{round(cases_per_million, 2)}/1M", className='option_card_title_1'),
+                            dbc.Col(html.H6(f"{round(cases_per_million, 2)} per million", className='option_card_title_1'),
                                              className='option_card_body_1')],
                                              className='option_card_row_1'),
 
-                    dbc.Row([dbc.Col(html.Img(src="assets/images/recover_rate.png",
+                    dbc.Row([dbc.Col(html.Img(src="assets/images/recovered.png",
                                               className='option_card_img_2'), width=4),
                             dbc.Col(html.H6(f"{round(recovery_rate, 2)} %", className='option_card_title_2'),
                                              className='option_card_body_2')],
                                              className='option_card_row_2'),
 
-                    dbc.Row([dbc.Col(html.Img(src="assets/images/death_rate.png",
+                    dbc.Row([dbc.Col(html.Img(src="assets/images/deceased.png",
                                               className='option_card_img_3'), width=4),
                             dbc.Col(html.H6(f"{round(mortality_rate, 2)} %", className='option_card_title_3'),
                                              className='option_card_body_3')],
                                              className='option_card_row_3'),
 
-                    dbc.Row([dbc.Col(html.Img(src="assets/images/active_rate.png",
+                    dbc.Row([dbc.Col(html.Img(src="assets/images/active.png",
                                               className='option_card_img_4'), width=4),
                             dbc.Col(html.H6(f"{round(active_rate, 2)} %", className='option_card_title_4'),
                                              className='option_card_body_4')],
@@ -142,9 +181,6 @@ option_card = dbc.Card([
 
 ##########################################
 
-
-data = pd.read_csv('data/covid_19_data.csv')
-columns = [{"name": i, "id": i, } for i in (data.columns)]
 
 files = {'covid': 'data/covid_19_data.csv',
          'covid_line_list': 'data/COVID19_line_list_data.csv',
@@ -164,7 +200,7 @@ df_top = df_top.sort_values(by='Confirmed', ascending=False).iloc[:n]
 ################ world-map ################
 df_map = for_map(df_con, df_rec, df_dea, df_act)
 fig_map = create_map(df_map)
-fig_map = html.Div(dcc.Graph(figure=fig_map, className='fig_map'), style={'padding':'20px'})
+fig_map = html.Div(dcc.Graph(figure=fig_map, className='fig_map'), style={'padding':'1.25rem'})
 
 
 ############################################
@@ -183,18 +219,16 @@ card_container_row = dbc.Row(dbc.Col(dbc.Row([
                         dbc.Col(html.Div(card_3), className='cards'),
                         dbc.Col(html.Div(card_4), className='cards'),
                         dbc.Col(html.Div(option_card), className='cards')
-                        ]), className='figure_rows'))
+                        ]), className='cards_col'), className='cards_row')
 
 ############################################
 # tab items
-
 dropdown_country = dbc.Card(dbc.CardBody(dbc.Row([
                                         dbc.Col(dbc.Input(placeholder="Search country...", type="text",
                                                       list='list-data', id='_cntry_name', value='India')),
                                         html.Datalist(id='list-data',
                                                       children=[html.Option(value=c) for c in countries])
                                         ]), className='tab_global'), className='tab_global')
-
 
 dropdown_global = dbc.Card(dbc.CardBody(dbc.Row(dbc.Col(
                             dbc.InputGroup([
@@ -216,8 +250,7 @@ dropdown_global = dbc.Card(dbc.CardBody(dbc.Row(dbc.Col(
                                               {"label": "active", "value": 'Active'}], value='Confirmed'),
 
                                 dbc.InputGroupAddon("cases!", addon_type="prepend", className='addon_text'),
-                                 ], className='input_group'))),
-                                    className='tab_global'), className='tab_global')
+                                 ], className='input_group'))), className='tab_global_card'), className='tab_global_card')
 
 #############################################
 # tabs
@@ -315,6 +348,7 @@ fig_active_rate = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(id='f
     [Input('button', 'n_clicks')],
     state = [State("_no_of_cntry", "value"), State("_hgh_or_lw", "value"), State("_feature", "value"),
      State("_cntry_name", "value"), State("_tabs", "active_tab")])
+
 def output_text(n_clicks, _no_of_cntry, _hgh_or_lw, _feature, _cntry_name, _tabs):
 
     if _tabs == 'tab-1':
@@ -345,17 +379,22 @@ def output_text(n_clicks, _no_of_cntry, _hgh_or_lw, _feature, _cntry_name, _tabs
 
 ##########################
 # app
+github = html.A(dbc.CardImg(src="assets/images/github.svg", top=True), href='https://github.com/SarthakV7/covid_dashboard', target="_blank")
+linkedin = html.A(dbc.CardImg(src="assets/images/linkedin.svg", top=True), href='https://www.linkedin.com/in/sarthak-vajpayee/', target="_blank")
+kaggle = html.A(dbc.CardImg(src="assets/images/kaggle.svg", top=True), href='https://www.kaggle.com/sarthakvajpayee', target="_blank")
+
+profile_links = dbc.Row([dbc.Col(width=6),
+                         dbc.Col(github, width=2),
+                         dbc.Col(linkedin, width=2),
+                         dbc.Col(kaggle, width=2)])
+
+heading = html.Div(dbc.Row([dbc.Col(html.H2("Covid-19 Global Dashboard", className='page_title'), width=8, className='header_col1'),
+                            dbc.Col(profile_links, width=4, className='header_col2')],
+                           className='header_container'))
 
 app.layout = html.Div(children=[
-    html.H1(children='COVID 19 Dashboard', className='yellow'),
-    html.H2(children='created by Sarthak Vajpayee', className='blue'),
-
-    html.Br(),
+    heading,
     fig_map,
-
-    html.Br(),
-
-    html.Br(),
     html.Div(dbc.Row([
                 dbc.Col(table_card, className='table_container', width=4),
                 dbc.Col([
@@ -378,18 +417,8 @@ app.layout = html.Div(children=[
                 ]), className='table_card_row')
     ])
 
-
-
-# @app.callback(
-#     [Output('data_table', 'columns'), Output('data_table', 'data')],
-#     [Input(component_id='data_select', component_property='value'), Input('rows', 'value')]
-# )
-# def update_output_div(ip1, ip2):
-#     data = pd.read_csv(ip1, nrows=ip2)
-#     columns = [{"name": i, "id": i, } for i in (data.columns)]
-#     return columns, data.to_dict('records')
-
-
+executor = ThreadPoolExecutor(max_workers=1)
+executor.submit(update_data)
 
 if __name__ == '__main__':
     app.run_server(debug=True)
