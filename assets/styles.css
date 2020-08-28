@@ -16,9 +16,6 @@ body {
   background-color:#000;
 }
 
-.blue { color: #185875; }
-.yellow { color: #FFF842; }
-
 .container th h1 {
       text-align: center;
       font-size: 0.9em;
@@ -46,9 +43,11 @@ body {
 }
 
 /* tabs */
-.addon_text{ font-size: 0.5rem;}
+.addon_text{ font-size: 0.5rem; background-color: rgba(100,100,100,0)}
 
-.tab_global{ background-color: rgba(100,100,100,0); font-size: 0.8rem;}
+.input-group{ background-color: rgba(100,100,100,0)}
+.tab_global_card{ background-color: rgba(100,100,100,0); font-size: 0.8rem; padding: 0}
+.tab_global{ background-color: rgba(100,100,100,0); font-size: 0.8rem; padding: 1.25rem 0 1.25rem 0}
 .tab_country{ background-color: rgba(100,100,100,0);}
 .tabs_row{ background-color: rgba(100,100,100,0); margin : 1rem;}
 .tabs_column{ background-color: rgba(100,100,100,0.2); padding : 1rem;}
@@ -62,7 +61,6 @@ body {
   color: #FFF;
   font-weight: bold;
 }
-
 
 .input_group{ background-color: rgba(100,100,100,0.2); padding : 0rem;}
 
@@ -79,8 +77,14 @@ body {
 }
 
 
-/* figure plot */
+.link{font-size: 0.8rem;}
+.header_container{ background-color: rgba(100,100,100,0.1); margin : 0 1rem 0 1rem}
+.header_col1{ background-color: rgba(100,100,100,0.1); padding : 1rem;}
+.header_col2{ background-color: rgba(100,100,100,0.1); padding : 1rem;}
+.page_title{vertical-align : middle; horizontal-align : middle; color: #FFFFFF}
+.profile_link{vertical-align : middle; horizontal-align : middle;}
 
+/* figure plot */
 .figure_global{ background-color: rgba(100,100,100,0.2); padding : 0}
 .figure_confirmed{ background-color: rgba(100,100,100,0.2); padding : 0}
 .figure_recovered{ background-color: rgba(100,100,100,0.2); padding : 0}
@@ -88,6 +92,8 @@ body {
 .figure_active{ background-color: rgba(100,100,100,0.2); padding : 0}
 
 .figure_rows{ background-color: rgba(100,100,100,0); margin : 1rem;}
+.cards_column{ background-color: rgba(100,100,100,0); margin : 1rem;}
+.cards_row{ background-color: rgba(100,100,100,0); margin : 0rem;}
 
 .figure_global:hover {
     background-color: #222;
@@ -150,7 +156,6 @@ body {
 }
 
 /* data cards */
-
 .card_container{
       vertical-align : middle;
       horizontal-align : middle;
@@ -158,7 +163,6 @@ body {
 }
 
 .card{padding: 0rem}
-
 .card_title{font-size: 0.8rem;}
 .card_changed{font-size: 0.9rem;}
 .card_value{font-size: 1.1rem;}
@@ -168,7 +172,6 @@ body {
       vertical-align : middle;
       horizontal-align : middle;
       border : 0rem;}
-
 
 .card_1{ width: 9rem; height: 16rem; background-color: rgba(100,100,100,0.2);}
 .card_2{ width: 9rem; height: 16rem; background-color: rgba(100,100,100,0.2);}
@@ -341,7 +344,6 @@ body {
 }
 
 /* table */
-
 .container {
 	  margin: auto;
 	  overflow: hidden;
@@ -351,6 +353,7 @@ body {
       border-collapse: separate;
       border-spacing: 0.2em 0.2em;
 }
+
 
 .container td {
 	  font-weight: normal;
@@ -369,6 +372,7 @@ body {
       border-radius:3px;
       border: 0;
 }
+
 
 .table_card_row{
       vertical-align : middle;
@@ -403,6 +407,7 @@ body {
 	        box-shadow: 0 6px 6px -6px #0E1119;
 }
 
+
 /* 1st column */
 .container td:hover:nth-child(1) {
   background-color: #f2f2f2;
@@ -416,6 +421,7 @@ body {
   transition-timing-function: line;
 }
 
+
 /* 2nd column */
 .container td:hover:nth-child(2) {
     background-color: rgba(156, 58, 255, 0.2);
@@ -428,6 +434,7 @@ body {
     transition-property: all;
     transition-timing-function: line;
 }
+
 
 /* 3rd column */
 .container td:hover:nth-child(3) {
