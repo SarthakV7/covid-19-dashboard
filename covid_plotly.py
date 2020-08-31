@@ -13,6 +13,8 @@ import os
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP],
                 meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}])
 
+app.title = 'COVID-19 Global Dashboard'
+
 server=app.server
 
 def define_variables(df_confirmed, df_recovered, df_deaths):
@@ -416,7 +418,7 @@ app.layout = html.Div(children=[
                     fig_active_rate,
                     ], width=8),
                 ]), className='table_card_row')
-    ])
+        ])
 
 executor = ThreadPoolExecutor(max_workers=1)
 executor.submit(update_data)

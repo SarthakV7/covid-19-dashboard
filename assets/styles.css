@@ -78,7 +78,7 @@ body {
 
 
 .link{font-size: 0.8rem;}
-.header_container{ background-color: rgba(100,100,100,0.1); margin : 0 1rem 0 1rem}
+.header_container{ background-color: rgba(100,100,100,0.1); margin : 1rem 1rem 0 1rem}
 .header_col1{ background-color: rgba(100,100,100,0.1); padding : 1rem;}
 .header_col2{ background-color: rgba(100,100,100,0.1); padding : 1rem;}
 .page_title{vertical-align : middle; horizontal-align : middle; color: #FFFFFF}
