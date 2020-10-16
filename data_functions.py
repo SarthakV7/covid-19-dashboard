@@ -1,4 +1,5 @@
 import plotly.graph_objects as go
+import plotly.express as px
 import pandas as pd
 import numpy as np
 
@@ -107,6 +108,21 @@ def create_map(df_map):
     fig_map.update_layout(autosize=True, height=600)
 
     return fig_map
+
+
+def create_sunburst(df, feature):
+    title = f'Sunburst plot for global {feature.lower()} cases'
+    if feature=='Confirmed':
+        cc='purple'
+    elif feature=='Recovered':
+        cc='green'
+    elif feature == 'Active':
+        cc = 'yellow'
+    else:
+        cc='red'
+    fig = px.sunburst(df, path=['Continent', 'Country'], values=feature, title=title,
+                      color_continuous_scale=['black', cc], color=feature, template='plotly_dark')
+    return fig
 
 
 def create_global_bar(df_top, top=10, by='Confirmed', order='highest', cnt_name='#'):

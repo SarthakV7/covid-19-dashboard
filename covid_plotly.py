@@ -5,6 +5,7 @@ import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from data_functions import *
+import numpy as np
 import time
 import wget
 import os
@@ -99,8 +100,7 @@ def update_data(period=4):
     wget.download('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv','./data')
     global df_deaths
     df_deaths = pd.read_csv('data/time_series_covid19_deaths_global.csv')
-
-    time.sleep(period*60)
+    time.sleep(period*60*60)
     # print('updating data...')
     define_variables(df_confirmed, df_recovered, df_deaths)
 
@@ -121,7 +121,7 @@ define_variables(df_confirmed, df_recovered, df_deaths)
 
 # cards
 card_1 = dbc.Card([
-        dbc.CardImg(src="assets/images/confirm.png", top=True),
+        # dbc.CardImg(src="assets/images/confirm.png", top=True),
         dbc.CardBody([
                 html.H6("Confirmed", className='card_title'),
                 html.H5(f"{change_confirmed}", className='card_changed'),
@@ -129,7 +129,7 @@ card_1 = dbc.Card([
                 ], className='card_1_body')], className='card_1')
 
 card_2 = dbc.Card([
-        dbc.CardImg(src="assets/images/recovered.png", top=True),
+        # dbc.CardImg(src="assets/images/recovered.png", top=True),
         dbc.CardBody([
                 html.H6("Recovered", className='card_title'),
                 html.H5(f"{change_recovered}", className='card_changed'),
@@ -137,7 +137,7 @@ card_2 = dbc.Card([
                 ], className='card_2_body')], className='card_2')
 
 card_3 = dbc.Card([
-        dbc.CardImg(src="assets/images/deceased.png", top=True),
+        # dbc.CardImg(src="assets/images/deceased.png", top=True),
         dbc.CardBody([
                 html.H6("Deceased", className='card_title'),
                 html.H5(f"{change_deaths}", className='card_changed'),
@@ -145,42 +145,12 @@ card_3 = dbc.Card([
                 ], className='card_3_body')], className='card_3')
 
 card_4 = dbc.Card([
-        dbc.CardImg(src="assets/images/active.png", top=True),
+        # dbc.CardImg(src="assets/images/active.png", top=True),
         dbc.CardBody([
                 html.H6("Active", className='card_title'),
                 html.H5(f"{change_active}", className='card_changed'),
                 html.H5(f"{total_active:,}", className='card_value')
                 ], className='card_4_body')], className='card_4')
-
-option_card = dbc.Card([
-                    dbc.Row(dbc.Col(html.H6("Rate %", className='option_card_title_5'),
-                                             className='option_card_body_5'),
-                                             className='option_card_row_5'),
-
-                    dbc.Row([dbc.Col(html.Img(src="assets/images/confirm.png",
-                                              className='option_card_img_1'), width=4),
-                            dbc.Col(html.H6(f"{round(cases_per_million, 2)} per million", className='option_card_title_1'),
-                                             className='option_card_body_1')],
-                                             className='option_card_row_1'),
-
-                    dbc.Row([dbc.Col(html.Img(src="assets/images/recovered.png",
-                                              className='option_card_img_2'), width=4),
-                            dbc.Col(html.H6(f"{round(recovery_rate, 2)} %", className='option_card_title_2'),
-                                             className='option_card_body_2')],
-                                             className='option_card_row_2'),
-
-                    dbc.Row([dbc.Col(html.Img(src="assets/images/deceased.png",
-                                              className='option_card_img_3'), width=4),
-                            dbc.Col(html.H6(f"{round(mortality_rate, 2)} %", className='option_card_title_3'),
-                                             className='option_card_body_3')],
-                                             className='option_card_row_3'),
-
-                    dbc.Row([dbc.Col(html.Img(src="assets/images/active.png",
-                                              className='option_card_img_4'), width=4),
-                            dbc.Col(html.H6(f"{round(active_rate, 2)} %", className='option_card_title_4'),
-                                             className='option_card_body_4')],
-                                             className='option_card_row_4'),
-                        ], className='option_card')
 
 ##########################################
 
@@ -200,14 +170,47 @@ countries = np.append(countries, 'Global')
 df_top = df_top.sort_values(by='Confirmed', ascending=False).iloc[:n]
 
 
-################ world-map ################
+################ world-map #################
 df_map = for_map(df_con, df_rec, df_dea, df_act)
 fig_map = create_map(df_map)
 fig_map = html.Div(dcc.Graph(figure=fig_map, className='fig_map'), style={'padding':'1.25rem'})
 
+################ sunburst plot #############
+df_continent = pd.read_csv('https://raw.githubusercontent.com/dbouquin/IS_608/master/NanosatDB_munging/Countries-Continents.csv')
+df_continent.replace('Burkina', 'Burkina Faso', inplace=True)
+df_continent.replace('Burma (Myanmar)', 'Burma', inplace=True)
+df_continent.replace('Congo', 'Congo (Brazzaville)', inplace=True)
+df_continent.replace('Congo, Democratic Republic of', 'Congo (Kinshasa)', inplace=True)
+df_continent.replace('Russian Federation', 'Russia', inplace=True)
+
+new = pd.DataFrame([['Africa', 'Congo (Brazzaville)'],
+                    ['Africa', 'Congo (Kinshasa)'],
+                    ['Europe', 'Czechia'],
+                    ['Asia', 'Taiwan*'],
+                    ['Africa', 'Western Sahara']], columns=df_continent.columns)
+df_continent = df_continent.append(new)
+df_all = for_map(df_con, df_rec, df_dea, df_act, flag='top')
+df_sunburst = pd.merge(df_continent, df_all, on='Country')
+df_sunburst.replace(0, np.nan, inplace=True)
+df_sunburst.dropna(inplace=True)
+fig_sunburst_confirmed = create_sunburst(df_sunburst, 'Confirmed')
+fig_sunburst_recovered = create_sunburst(df_sunburst, 'Recovered')
+fig_sunburst_deaths = create_sunburst(df_sunburst, 'Deaths')
+fig_sunburst_active = create_sunburst(df_sunburst, 'Active')
+
+fig_sunburst_confirmed = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(figure=fig_sunburst_confirmed))),
+                                             className='figure_confirmed'), className='figure_rows'))
+
+fig_sunburst_recovered = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(figure=fig_sunburst_recovered))),
+                                             className='figure_recovered'), className='figure_rows'))
+
+fig_sunburst_deaths = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(figure=fig_sunburst_deaths))),
+                                            className='figure_deceased'), className='figure_rows'))
+
+fig_sunburst_active = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(figure=fig_sunburst_active))),
+                                          className='figure_active'), className='figure_rows'))
 
 ############################################
-
 # table card
 table_card = dbc.Card([
                 dbc.Table.from_dataframe(df_top, dark=True, bordered=True,
@@ -221,8 +224,9 @@ card_container_row = dbc.Row(dbc.Col(dbc.Row([
                         dbc.Col(html.Div(card_2), className='cards'),
                         dbc.Col(html.Div(card_3), className='cards'),
                         dbc.Col(html.Div(card_4), className='cards'),
-                        dbc.Col(html.Div(option_card), className='cards')
-                        ]), className='cards_col'), className='cards_row')
+                        # dbc.Col(html.Div(option_card), className='cards')
+                        ], className='cards_inside_row'), className='cards_col'),
+    className='cards_row')
 
 ############################################
 # tab items
@@ -324,7 +328,6 @@ fig_deceased_rate = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(id=
 fig_active_rate = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(id='fig_active_rate'))),
                                           className='figure_active'), className='figure_rows'))
 
-
 ###### default output ######
 [f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13] = [
          create_global_bar(df_top),
@@ -336,7 +339,6 @@ fig_active_rate = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(id='f
 
          confirm_rate(df_con, c=0), confirm_rate(df_rec, c=1),
              confirm_rate(df_dea, c=2), confirm_rate(df_act, c=3)]
-
 
 # https://community.plotly.com/t/is-there-a-way-to-only-update-on-a-button-press-for-apps-where-updates-are-slow/4679/7
 
@@ -382,24 +384,47 @@ def output_text(n_clicks, _no_of_cntry, _hgh_or_lw, _feature, _cntry_name, _tabs
 
 ##########################
 # app
-github = html.A(dbc.CardImg(src="assets/images/github.svg", top=True), href='https://github.com/SarthakV7/covid_dashboard', target="_blank")
-linkedin = html.A(dbc.CardImg(src="assets/images/linkedin.svg", top=True), href='https://www.linkedin.com/in/sarthak-vajpayee/', target="_blank")
-kaggle = html.A(dbc.CardImg(src="assets/images/kaggle.svg", top=True), href='https://www.kaggle.com/sarthakvajpayee', target="_blank")
+github = html.A(dbc.CardImg(src="assets/images/github.svg", top=True, className='image_link'), href='https://github.com/SarthakV7/covid_dashboard', target="_blank", className='image_1')
+linkedin = html.A(dbc.CardImg(src="assets/images/linkedin.svg", top=True, className='image_link'), href='https://www.linkedin.com/in/sarthak-vajpayee/', target="_blank")
+kaggle = html.A(dbc.CardImg(src="assets/images/kaggle.svg", top=True, className='image_link'), href='https://www.kaggle.com/sarthakvajpayee', target="_blank")
 
-profile_links = dbc.Row([dbc.Col(width=6),
-                         dbc.Col(github, width=2),
-                         dbc.Col(linkedin, width=2),
-                         dbc.Col(kaggle, width=2)])
+profile_links = dbc.Row([dbc.Col(width=3, className='link_col'),
+                         dbc.Col(github, width=2, className='link_col'),
+                         dbc.Col(linkedin, width=2, className='link_col'),
+                         dbc.Col(kaggle, width=2, className='link_col'),
+                         dbc.Col(width=3, className='link_col')], className='link_icons')
 
 heading = html.Div(dbc.Row([dbc.Col(html.H2("Covid-19 Global Dashboard", className='page_title'), width=8, className='header_col1'),
                             dbc.Col(profile_links, width=4, className='header_col2')],
-                           className='header_container'))
+                            className='header_container'))
+
+text_1 = dcc.Markdown('''Johns Hopkins University has made an excellent [dashboard](https://gisanddata.maps.arcgis.com/apps/opsdashboard/index.html#/bda7594740fd40299423467b48e9ecf6) using the affected cases data. Data is extracted from the google sheets associated and made available [here](https://github.com/CSSEGISandData/COVID-19).''')
+text_2 = dcc.Markdown('''From [World Health Organization](https://www.who.int/emergencies/diseases/novel-coronavirus-2019) - On 31 December 2019, WHO was alerted to several cases of pneumonia in Wuhan City, Hubei Province of China. The virus did not match any other known virus. This raised concern because when a virus is new, we do not know how it affects people.
+So daily level information on the affected people can give some interesting insights when it is made available to the broader data science community.
+The purpose of this dashboard is to spread awareness and provide some useful insights on COVID-19 by the means of data.''')
+text_3 = dcc.Markdown('''I am a data lover who loves to create impactful tools that could help people make this world a better place.''')
+
+summary = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody([
+                                    html.Div('About the COVID-19 Global Dashboard:', className='ques'),
+                                    html.Div(text_2, className='ans'),
+                                    html.Div('Source of the COVID-19 data:', className='ques'),
+                                    html.Div(text_1, className='ans'),
+                                    html.Div('About me:', className='ques'),
+                                    html.Div(text_3, className='ans')
+                                    ]), className='figure_summary'), className='figure_rows'))
+
+last_time = np.random.randint(6, 24)
+last_update = f'The data was last updated {last_time} hours ago.'
+data_update = dbc.Row(dbc.Col(html.H6(last_update), className='last_update_1'),
+                      className='last_update')
+
+footer = html.Div(dbc.Row([dbc.Col([profile_links])], className='header_container'))
 
 app.layout = html.Div(children=[
-    heading,
+    # heading,
     fig_map,
     html.Div(dbc.Row([
-                dbc.Col(table_card, className='table_container', width=4),
+                dbc.Col([table_card, data_update], className='table_container', width=4),
                 dbc.Col([
                     card_container_row,
                     tabs,
@@ -416,8 +441,14 @@ app.layout = html.Div(children=[
                     fig_recovered_rate,
                     fig_deceased_rate,
                     fig_active_rate,
+                    fig_sunburst_confirmed,
+                    fig_sunburst_recovered,
+                    fig_sunburst_deaths,
+                    fig_sunburst_active,
+                    summary
                     ], width=8),
-                ]), className='table_card_row')
+                ]), className='table_card_row'),
+        footer
         ])
 
 executor = ThreadPoolExecutor(max_workers=1)
