@@ -387,12 +387,14 @@ def output_text(n_clicks, _no_of_cntry, _hgh_or_lw, _feature, _cntry_name, _tabs
 github = html.A(dbc.CardImg(src="assets/images/github.svg", top=True, className='image_link'), href='https://github.com/SarthakV7/covid_dashboard', target="_blank", className='image_1')
 linkedin = html.A(dbc.CardImg(src="assets/images/linkedin.svg", top=True, className='image_link'), href='https://www.linkedin.com/in/sarthak-vajpayee/', target="_blank")
 kaggle = html.A(dbc.CardImg(src="assets/images/kaggle.svg", top=True, className='image_link'), href='https://www.kaggle.com/sarthakvajpayee', target="_blank")
+medium = html.A(dbc.CardImg(src="assets/images/medium.png", top=True, className='image_link'), href='https://medium.com/@itssarthakvajpayee/', target="_blank")
 
-profile_links = dbc.Row([dbc.Col(width=3, className='link_col'),
+profile_links = dbc.Row([dbc.Col(width=2, className='link_col'),
                          dbc.Col(github, width=2, className='link_col'),
                          dbc.Col(linkedin, width=2, className='link_col'),
                          dbc.Col(kaggle, width=2, className='link_col'),
-                         dbc.Col(width=3, className='link_col')], className='link_icons')
+                         dbc.Col(medium, width=2, className='link_col'),
+                         dbc.Col(width=2, className='link_col')], className='link_icons')
 
 heading = html.Div(dbc.Row([dbc.Col(html.H2("Covid-19 Global Dashboard", className='page_title'), width=8, className='header_col1'),
                             dbc.Col(profile_links, width=4, className='header_col2')],
