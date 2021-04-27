@@ -45,9 +45,9 @@ def define_variables(df_confirmed, df_recovered, df_deaths):
     df_recovered.rename(columns={'Country/Region': 'Country'}, inplace=True)
     df_deaths.drop(['Province/State', 'Lat', 'Long'], axis=1, inplace=True)
     df_deaths.rename(columns={'Country/Region': 'Country'}, inplace=True)
-    df_rec = merge_countries(df_recovered).sort_values(by='Country')
-    df_con = merge_countries(df_confirmed).sort_values(by='Country')
-    df_dea = merge_countries(df_deaths).sort_values(by='Country')
+    df_rec = merge_countries(df_recovered).sort_values(by='Country')#.drop(['12/13/20'], axis=1)
+    df_con = merge_countries(df_confirmed).sort_values(by='Country')#.drop(['12/13/20'], axis=1)
+    df_dea = merge_countries(df_deaths).sort_values(by='Country')#.drop(['12/13/20'], axis=1)
     df_act = df_con.copy()
     df_act[df_act.columns[1:]] = df_con.values[:, 1:] - (df_rec.values[:, 1:] + df_dea.values[:, 1:])
     confirmed = date_wise(df_con.sum(axis=0))
@@ -154,7 +154,6 @@ card_4 = dbc.Card([
 
 ##########################################
 
-
 files = {'covid': 'data/covid_19_data.csv',
          'covid_line_list': 'data/COVID19_line_list_data.csv',
          'COVID19_open_line_list': 'data/COVID19_open_line_list.csv',
@@ -162,13 +161,15 @@ files = {'covid': 'data/covid_19_data.csv',
          'global_deaths': 'data/time_series_covid_19_deaths.csv',
          'global_recovered': 'data/time_series_covid_19_recovered.csv'}
 
-
 n = -1
 df_top = for_map(df_con, df_rec, df_dea, df_act, flag='top')
 countries = df_top['Country'].values
 countries = np.append(countries, 'Global')
 df_top = df_top.sort_values(by='Confirmed', ascending=False).iloc[:n]
-
+idx = df_top[df_top['Country']=='US'].index[0]
+temp = df_top.loc[idx].values
+temp[2], temp[4] = '-', '-'
+df_top.loc[idx] = temp
 
 ################ world-map #################
 df_map = for_map(df_con, df_rec, df_dea, df_act)
@@ -189,8 +190,8 @@ new = pd.DataFrame([['Africa', 'Congo (Brazzaville)'],
                     ['Asia', 'Taiwan*'],
                     ['Africa', 'Western Sahara']], columns=df_continent.columns)
 df_continent = df_continent.append(new)
-df_all = for_map(df_con, df_rec, df_dea, df_act, flag='top')
-df_sunburst = pd.merge(df_continent, df_all, on='Country')
+df_sunburst = for_map(df_con, df_rec, df_dea, df_act, flag='top')
+df_sunburst = pd.merge(df_continent, df_sunburst, on='Country')
 df_sunburst.replace(0, np.nan, inplace=True)
 df_sunburst.dropna(inplace=True)
 fig_sunburst_confirmed = create_sunburst(df_sunburst, 'Confirmed')

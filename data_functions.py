@@ -34,7 +34,7 @@ def merge_countries(df, flag=0):
 
 
 def get_alpha_iso(df):
-    x = pd.read_csv('data/country_to_iso.csv')[['Country', 'Alpha-3 code']]
+    x = pd.read_csv('https://raw.githubusercontent.com/SarthakV7/covid_dashboard/master/data/country_to_iso.csv')[['Country', 'Alpha-3 code']]
     x['Alpha-3 code'] = x['Alpha-3 code'].apply(lambda x: x[2:-1])
     dic = {'US': 'USA', 'IRAN': 'IRN', 'Congo (Brazzaville)': 'COG', 'Congo (Kinshasa)': 'COD', "Cote d'Ivoire": 'CIV',
            'Czechia': 'CZE',
@@ -78,6 +78,11 @@ def for_map(a,b,c,d, flag='none'):
 
   if flag=='top':
     return df
+
+  idx = df[df['Country'] == 'US'].index[0]
+  temp = df.loc[idx].values
+  temp[2], temp[4] = 'data not available', 'data not available'
+  df.loc[idx] = temp
 
   for col in df.columns:
     df[col] = df[col].astype(str)
