@@ -54,7 +54,7 @@ def define_variables(df_confirmed, df_recovered, df_deaths):
     recovered = date_wise(df_rec.sum(axis=0))
     active = date_wise(df_act.sum(axis=0))
     deaths = date_wise(df_dea.sum(axis=0))
-    total_confirmed = confirmed.Value.iloc[-1]
+    total_confirmed = confirmed.Value.iloc[-1] 
     total_recovered = recovered.Value.iloc[-1]
     total_deaths = deaths.Value.iloc[-1]
     total_active = total_confirmed - total_recovered + total_deaths
