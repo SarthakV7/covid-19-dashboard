@@ -18,68 +18,60 @@ app.title = 'COVID-19 Global Dashboard'
 
 server=app.server
 
-def define_variables(df_confirmed, df_recovered, df_deaths):
-    global df_rec
+
+def define_variables(df_confirmed, df_vaccinated, df_deaths):
+    global df_vac
     global df_con
     global df_dea
     global df_act
     global confirmed
-    global recovered
-    global active
+    global vaccinated
     global deaths
     global total_confirmed
-    global total_recovered
+    global total_vaccinated
     global total_deaths
-    global total_active
     global change_confirmed
-    global change_recovered
+    global change_vaccinated
     global change_deaths
-    global change_active
-    global active_rate
     global recovery_rate
     global mortality_rate
     global cases_per_million
     df_confirmed.drop(['Province/State', 'Lat', 'Long'], axis=1, inplace=True)
     df_confirmed.rename(columns={'Country/Region': 'Country'}, inplace=True)
-    df_recovered.drop(['Province/State', 'Lat', 'Long'], axis=1, inplace=True)
-    df_recovered.rename(columns={'Country/Region': 'Country'}, inplace=True)
+    df_vaccinated.drop(['UID', 'iso2', 'iso3', 'code3', 'FIPS', 'Admin2', 'Province_State',
+                        'Lat', 'Long_', 'Combined_Key', 'Population'], axis=1, inplace=True)
+    df_vaccinated.rename(columns={'Country_Region': 'Country'}, inplace=True)
     df_deaths.drop(['Province/State', 'Lat', 'Long'], axis=1, inplace=True)
     df_deaths.rename(columns={'Country/Region': 'Country'}, inplace=True)
-    df_rec = merge_countries(df_recovered).sort_values(by='Country')#.drop(['12/13/20'], axis=1)
-    df_con = merge_countries(df_confirmed).sort_values(by='Country')#.drop(['12/13/20'], axis=1)
-    df_dea = merge_countries(df_deaths).sort_values(by='Country')#.drop(['12/13/20'], axis=1)
-    df_act = df_con.copy()
-    df_act[df_act.columns[1:]] = df_con.values[:, 1:] - (df_rec.values[:, 1:] + df_dea.values[:, 1:])
+    df_vac = merge_countries(df_vaccinated).sort_values(by='Country')  # .drop(['12/13/20'], axis=1)
+    df_con = merge_countries(df_confirmed).sort_values(by='Country')  # .drop(['12/13/20'], axis=1)
+    df_dea = merge_countries(df_deaths).sort_values(by='Country')  # .drop(['12/13/20'], axis=1)
+    df_con.columns = [df_con.columns[0]] + [fix_date(x) for x in df_con.columns[1:]]
+    df_dea.columns = [df_dea.columns[0]] + [fix_date(x) for x in df_dea.columns[1:]]
+
     confirmed = date_wise(df_con.sum(axis=0))
-    recovered = date_wise(df_rec.sum(axis=0))
-    active = date_wise(df_act.sum(axis=0))
+    vaccinated = date_wise(df_vac.sum(axis=0), flag=1)
     deaths = date_wise(df_dea.sum(axis=0))
-    total_confirmed = confirmed.Value.iloc[-1] 
-    total_recovered = recovered.Value.iloc[-1]
+    total_confirmed = confirmed.Value.iloc[-1]
+    total_vaccinated = vaccinated.Value.iloc[-1]
     total_deaths = deaths.Value.iloc[-1]
-    total_active = total_confirmed - total_recovered + total_deaths
     change_confirmed = confirmed.Value.iloc[-1] - confirmed.Value.iloc[-2]
-    change_recovered = recovered.Value.iloc[-1] - recovered.Value.iloc[-2]
+    change_vaccinated = vaccinated.Value.iloc[-1] - vaccinated.Value.iloc[-2]
     change_deaths = deaths.Value.iloc[-1] - deaths.Value.iloc[-2]
-    change_active = change_confirmed - change_recovered + change_deaths
-    if change_active >= 0:
-        change_active = f'+{change_active:,}'
-    else:
-        change_active = f'-{-change_active:,}'
+
     if change_confirmed >= 0:
         change_confirmed = f'+{change_confirmed:,}'
     else:
         change_confirmed = f'-{-change_confirmed:,}'
-    if change_recovered >= 0:
-        change_recovered = f'+{change_recovered:,}'
+    if change_vaccinated >= 0:
+        change_vaccinated = f'+{int(change_vaccinated):,}'
     else:
-        change_recovered = f'-{-change_recovered:,}'
+        change_vaccinated = f'-{-int(change_vaccinated):,}'
     if change_deaths >= 0:
         change_deaths = f'+{change_deaths:,}'
     else:
         change_deaths = f'-{-change_deaths:,}'
-    active_rate = 100 * total_active / total_confirmed
-    recovery_rate = 100 * total_recovered / (total_confirmed)
+    recovery_rate = 100 * total_vaccinated / (total_confirmed)
     mortality_rate = 100 * total_deaths / (total_confirmed)
     cases_per_million = 1e6 * total_confirmed / 7796127694
 
@@ -107,16 +99,16 @@ def update_data(period=4):
 
 if 'time_series_covid19_confirmed_global.csv' not in os.listdir('./data'):
     wget.download('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv', './data')
-if 'time_series_covid19_recovered_global.csv' not in os.listdir('./data'):
-    wget.download('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv', './data')
+if 'time_series_covid19_vaccine_doses_admin_global.csv' not in os.listdir('./data'):
+    wget.download('https://raw.githubusercontent.com/govex/COVID-19/master/data_tables/vaccine_data/global_data/time_series_covid19_vaccine_doses_admin_global.csv', './data')
 if 'time_series_covid19_deaths_global.csv' not in os.listdir('./data'):
     wget.download('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv', './data')
 
 # importing data
 df_confirmed = pd.read_csv('data/time_series_covid19_confirmed_global.csv')
-df_recovered = pd.read_csv('data/time_series_covid19_recovered_global.csv')
+df_vaccinated = pd.read_csv('data/time_series_covid19_vaccine_doses_admin_global.csv')
 df_deaths = pd.read_csv('data/time_series_covid19_deaths_global.csv')
-define_variables(df_confirmed, df_recovered, df_deaths)
+define_variables(df_confirmed, df_vaccinated, df_deaths)
 
 
 # cards
@@ -131,9 +123,9 @@ card_1 = dbc.Card([
 card_2 = dbc.Card([
         # dbc.CardImg(src="assets/images/recovered.png", top=True),
         dbc.CardBody([
-                html.H6("Recovered", className='card_title'),
-                html.H5(f"{change_recovered}", className='card_changed'),
-                html.H5(f"{total_recovered:,}", className='card_value')
+                html.H6("Vaccinated", className='card_title'),
+                html.H5(f"{change_vaccinated}", className='card_changed'),
+                html.H5(f"{change_vaccinated}", className='card_value')
                 ], className='card_2_body')], className='card_2')
 
 card_3 = dbc.Card([
@@ -144,13 +136,13 @@ card_3 = dbc.Card([
                 html.H5(f"{total_deaths:,}", className='card_value')
                 ], className='card_3_body')], className='card_3')
 
-card_4 = dbc.Card([
-        # dbc.CardImg(src="assets/images/active.png", top=True),
-        dbc.CardBody([
-                html.H6("Active", className='card_title'),
-                html.H5(f"{change_active}", className='card_changed'),
-                html.H5(f"{total_active:,}", className='card_value')
-                ], className='card_4_body')], className='card_4')
+# card_4 = dbc.Card([
+#         # dbc.CardImg(src="assets/images/recovered.png", top=True),
+#         dbc.CardBody([
+#                 html.H6("Recovered", className='card_title'),
+#                 html.H5(f"{change_vaccinated}", className='card_changed'),
+#                 html.H5(f"{change_vaccinated}", className='card_value')
+#                 ], className='card_2_body')], className='card_4')
 
 ##########################################
 
@@ -159,20 +151,16 @@ files = {'covid': 'data/covid_19_data.csv',
          'COVID19_open_line_list': 'data/COVID19_open_line_list.csv',
          'global_confirmed': 'data/time_series_covid_19_confirmed.csv',
          'global_deaths': 'data/time_series_covid_19_deaths.csv',
-         'global_recovered': 'data/time_series_covid_19_recovered.csv'}
+         'global_vaccinated': 'data/time_series_covid19_vaccine_doses_admin_global.csv'}
 
 n = -1
-df_top = for_map(df_con, df_rec, df_dea, df_act, flag='top')
+df_top = for_map(df_con, df_vac, df_dea, flag='top')
 countries = df_top['Country'].values
 countries = np.append(countries, 'Global')
 df_top = df_top.sort_values(by='Confirmed', ascending=False).iloc[:n]
-idx = df_top[df_top['Country']=='US'].index[0]
-temp = df_top.loc[idx].values
-temp[2], temp[4] = '-', '-'
-df_top.loc[idx] = temp
 
 ################ world-map #################
-df_map = for_map(df_con, df_rec, df_dea, df_act)
+df_map = for_map(df_con, df_vac, df_dea)
 fig_map = create_map(df_map)
 fig_map = html.Div(dcc.Graph(figure=fig_map, className='fig_map'), style={'padding':'1.25rem'})
 
@@ -190,31 +178,27 @@ new = pd.DataFrame([['Africa', 'Congo (Brazzaville)'],
                     ['Asia', 'Taiwan*'],
                     ['Africa', 'Western Sahara']], columns=df_continent.columns)
 df_continent = df_continent.append(new)
-df_sunburst = for_map(df_con, df_rec, df_dea, df_act, flag='top')
+df_sunburst = for_map(df_con, df_vac, df_dea, flag='top')
 df_sunburst = pd.merge(df_continent, df_sunburst, on='Country')
 df_sunburst.replace(0, np.nan, inplace=True)
 df_sunburst.dropna(inplace=True)
 fig_sunburst_confirmed = create_sunburst(df_sunburst, 'Confirmed')
-fig_sunburst_recovered = create_sunburst(df_sunburst, 'Recovered')
+fig_sunburst_vaccinated = create_sunburst(df_sunburst, 'vaccinated')
 fig_sunburst_deaths = create_sunburst(df_sunburst, 'Deaths')
-fig_sunburst_active = create_sunburst(df_sunburst, 'Active')
 
 fig_sunburst_confirmed = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(figure=fig_sunburst_confirmed))),
                                              className='figure_confirmed'), className='figure_rows'))
 
-fig_sunburst_recovered = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(figure=fig_sunburst_recovered))),
+fig_sunburst_vaccinated = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(figure=fig_sunburst_vaccinated))),
                                              className='figure_recovered'), className='figure_rows'))
 
 fig_sunburst_deaths = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(figure=fig_sunburst_deaths))),
                                             className='figure_deceased'), className='figure_rows'))
 
-fig_sunburst_active = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(figure=fig_sunburst_active))),
-                                          className='figure_active'), className='figure_rows'))
-
 ############################################
 # table card
 table_card = dbc.Card([
-                dbc.Table.from_dataframe(df_top, dark=True, bordered=True,
+                dbc.Table.from_dataframe(df_top.iloc[:-12], dark=True, bordered=True,
                                  hover=True, responsive=True, size='sm',
                                  className='container', style={'margin': 'auto'})], className='table_card')
 
@@ -224,8 +208,7 @@ card_container_row = dbc.Row(dbc.Col(dbc.Row([
                         dbc.Col(html.Div(card_1), className='cards'),
                         dbc.Col(html.Div(card_2), className='cards'),
                         dbc.Col(html.Div(card_3), className='cards'),
-                        dbc.Col(html.Div(card_4), className='cards'),
-                        # dbc.Col(html.Div(option_card), className='cards')
+                        # dbc.Col(html.Div(card_4), className='cards'),
                         ], className='cards_inside_row'), className='cards_col'),
     className='cards_row')
 
@@ -253,9 +236,8 @@ dropdown_global = dbc.Card(dbc.CardBody(dbc.Row(dbc.Col(
 
                                 dbc.Select(id="_feature",
                                      options=[{"label": "confirmed", "value": 'Confirmed'},
-                                              {"label": "recovered", "value": 'Recovered'},
-                                              {"label": "deceased", "value": 'Deaths'},
-                                              {"label": "active", "value": 'Active'}], value='Confirmed'),
+                                              {"label": "vaccinated", "value": 'vaccinated'},
+                                              {"label": "deceased", "value": 'Deaths'}], value='Confirmed'),
 
                                 dbc.InputGroupAddon("cases!", addon_type="prepend", className='addon_text'),
                                  ], className='input_group'))), className='tab_global_card'), className='tab_global_card')
@@ -291,10 +273,6 @@ fig_recovered_cdf = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(id=
 fig_deceased_cdf = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(id='fig_deceased_cdf'))),
                                            className='figure_deceased'), className='figure_rows'))
 
-# fig_global_active_cdf = confirm_cdf(df_act, 3)
-fig_active_cdf = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(id='fig_active_cdf'))),
-                                         className='figure_active'), className='figure_rows'))
-
 # daily
 # fig_global_confirmed_daily = confirm_daily(df_con, 0)
 fig_confirmed_daily = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(id='fig_confirmed_daily'))),
@@ -307,10 +285,6 @@ fig_recovered_daily = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(i
 # fig_global_deceased_daily = confirm_daily(df_dea, 2)
 fig_deceased_daily = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(id='fig_deceased_daily'))),
                                              className='figure_deceased'), className='figure_rows'))
-
-# fig_global_active_daily = confirm_daily(df_act, 3)
-fig_active_daily = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(id='fig_active_daily'))),
-                                           className='figure_active'), className='figure_rows'))
 
 # rate
 # fig_global_confirmed_rate = confirm_rate(df_con, 0)
@@ -325,32 +299,29 @@ fig_recovered_rate = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(id
 fig_deceased_rate = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(id='fig_deceased_rate'))),
                                             className='figure_deceased'), className='figure_rows'))
 
-# fig_global_active_rate = confirm_rate(df_act, 3)
-fig_active_rate = dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(html.Div(dcc.Graph(id='fig_active_rate'))),
-                                          className='figure_active'), className='figure_rows'))
 
 ###### default output ######
-[f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13] = [
+[f1,f2,f3,f4,f5,f6,f7,f8,f9,f10] = [
          create_global_bar(df_top),
-         confirm_cdf(df_con, c=0), confirm_cdf(df_rec, c=1),
-             confirm_cdf(df_dea, c=2), confirm_cdf(df_act, c=3),
+         confirm_cdf(df_con, c=0), confirm_cdf(df_vac, c=1),
+             confirm_cdf(df_dea, c=2),
 
-         confirm_daily(df_con, c=0), confirm_daily(df_rec, c=1),
-             confirm_daily(df_dea, c=2), confirm_daily(df_act, c=3),
+         confirm_daily(df_con, c=0), confirm_daily(df_vac, c=1),
+             confirm_daily(df_dea, c=2),
 
-         confirm_rate(df_con, c=0), confirm_rate(df_rec, c=1),
-             confirm_rate(df_dea, c=2), confirm_rate(df_act, c=3)]
+         confirm_rate(df_con, c=0), confirm_rate(df_vac, c=1),
+             confirm_rate(df_dea, c=2)]
 
 # https://community.plotly.com/t/is-there-a-way-to-only-update-on-a-button-press-for-apps-where-updates-are-slow/4679/7
 
 @app.callback([
     Output("fig_bar", "figure"),
     Output("fig_confirmed_cdf", "figure"), Output("fig_recovered_cdf", "figure"),
-        Output("fig_deceased_cdf", "figure"), Output("fig_active_cdf", "figure"),
+        Output("fig_deceased_cdf", "figure"),
     Output("fig_confirmed_daily", "figure"), Output("fig_recovered_daily", "figure"),
-        Output("fig_deceased_daily", "figure"), Output("fig_active_daily", "figure"),
+        Output("fig_deceased_daily", "figure"),
     Output("fig_confirmed_rate", "figure"), Output("fig_recovered_rate", "figure"),
-        Output("fig_deceased_rate", "figure"), Output("fig_active_rate", "figure")],
+        Output("fig_deceased_rate", "figure")],
     [Input('button', 'n_clicks')],
     state = [State("_no_of_cntry", "value"), State("_hgh_or_lw", "value"), State("_feature", "value"),
      State("_cntry_name", "value"), State("_tabs", "active_tab")])
@@ -360,22 +331,23 @@ def output_text(n_clicks, _no_of_cntry, _hgh_or_lw, _feature, _cntry_name, _tabs
     if _tabs == 'tab-1':
         _cntry_name = '#'
 
-    output = [f1, f2, f3, f4, f5, f6, f7,
-              f8, f9, f10, f11, f12, f13]
+    output = [f1, f2, f3, f4, f5,
+              f6, f7, f8, f9, f10]
 
     # print('.. clicks ---->>>', n_clicks)
     if n_clicks:
         output = [create_global_bar(df_top, _no_of_cntry, _feature, _hgh_or_lw, _cntry_name),
-                  confirm_cdf(df_con, c=0, cntry_name=_cntry_name), confirm_cdf(df_rec, c=1, cntry_name=_cntry_name),
-                  confirm_cdf(df_dea, c=2, cntry_name=_cntry_name), confirm_cdf(df_act, c=3, cntry_name=_cntry_name),
+                  confirm_cdf(df_con, c=0, cntry_name=_cntry_name),
+                  confirm_cdf(df_vac, c=1, cntry_name=_cntry_name),
+                  confirm_cdf(df_dea, c=2, cntry_name=_cntry_name),
 
                   confirm_daily(df_con, c=0, cntry_name=_cntry_name),
-                  confirm_daily(df_rec, c=1, cntry_name=_cntry_name),
+                  confirm_daily(df_vac, c=1, cntry_name=_cntry_name),
                   confirm_daily(df_dea, c=2, cntry_name=_cntry_name),
-                  confirm_daily(df_act, c=3, cntry_name=_cntry_name),
 
-                  confirm_rate(df_con, c=0, cntry_name=_cntry_name), confirm_rate(df_rec, c=1, cntry_name=_cntry_name),
-                  confirm_rate(df_dea, c=2, cntry_name=_cntry_name), confirm_rate(df_act, c=3, cntry_name=_cntry_name)]
+                  confirm_rate(df_con, c=0, cntry_name=_cntry_name),
+                  confirm_rate(df_vac, c=1, cntry_name=_cntry_name),
+                  confirm_rate(df_dea, c=2, cntry_name=_cntry_name)]
 
         return output
 
@@ -390,15 +362,23 @@ linkedin = html.A(dbc.CardImg(src="assets/images/linkedin.svg", top=True, classN
 kaggle = html.A(dbc.CardImg(src="assets/images/kaggle.svg", top=True, className='image_link'), href='https://www.kaggle.com/sarthakvajpayee', target="_blank")
 medium = html.A(dbc.CardImg(src="assets/images/medium.png", top=True, className='image_link'), href='https://medium.com/@itssarthakvajpayee/', target="_blank")
 
+profile_links_top = dbc.Row([dbc.Col(github, width=2, className='link_col'),
+                             dbc.Col(linkedin, width=2, className='link_col'),
+                             dbc.Col(kaggle, width=2, className='link_col'),
+                             dbc.Col(medium, width=2, className='link_col'),
+                            ], className='link_icons')
+
 profile_links = dbc.Row([dbc.Col(width=2, className='link_col'),
                          dbc.Col(github, width=2, className='link_col'),
                          dbc.Col(linkedin, width=2, className='link_col'),
                          dbc.Col(kaggle, width=2, className='link_col'),
                          dbc.Col(medium, width=2, className='link_col'),
-                         dbc.Col(width=2, className='link_col')], className='link_icons')
+                         dbc.Col(width=2, className='link_col')
+                         ], className='link_icons')
 
-heading = html.Div(dbc.Row([dbc.Col(html.H2("Covid-19 Global Dashboard", className='page_title'), width=8, className='header_col1'),
-                            dbc.Col(profile_links, width=4, className='header_col2')],
+
+heading = html.Div(dbc.Row([dbc.Col(html.H3("Covid-19 Global Dashboard (for desktop)", className='page_title'), width=8, className='header_col1'),
+                            dbc.Col(profile_links_top, width=4, className='header_col2')],
                             className='header_container'))
 
 text_1 = dcc.Markdown('''Johns Hopkins University has made an excellent [dashboard](https://gisanddata.maps.arcgis.com/apps/opsdashboard/index.html#/bda7594740fd40299423467b48e9ecf6) using the affected cases data. Data is extracted from the google sheets associated and made available [here](https://github.com/CSSEGISandData/COVID-19).''')
@@ -424,7 +404,7 @@ data_update = dbc.Row(dbc.Col(html.H6(last_update), className='last_update_1'),
 footer = html.Div(dbc.Row([dbc.Col([profile_links])], className='header_container'))
 
 app.layout = html.Div(children=[
-    # heading,
+    heading,
     fig_map,
     html.Div(dbc.Row([
                 dbc.Col([table_card, data_update], className='table_container', width=4),
@@ -435,19 +415,15 @@ app.layout = html.Div(children=[
                     fig_confirmed_cdf,
                     fig_recovered_cdf,
                     fig_deceased_cdf,
-                    fig_active_cdf,
                     fig_confirmed_daily,
                     fig_recovered_daily,
                     fig_deceased_daily,
-                    fig_active_daily,
                     fig_confirmed_rate,
                     fig_recovered_rate,
                     fig_deceased_rate,
-                    fig_active_rate,
                     fig_sunburst_confirmed,
-                    fig_sunburst_recovered,
+                    fig_sunburst_vaccinated,
                     fig_sunburst_deaths,
-                    fig_sunburst_active,
                     summary
                     ], width=8),
                 ]), className='table_card_row'),

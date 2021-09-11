@@ -6,8 +6,7 @@ import numpy as np
 color_dict = {0:'rgba(156, 58, 255, 1)', 1:'rgba(80, 247, 138, 1)',
               2:'rgba(247, 80, 80, 1)', 3:'rgba(253, 241, 73, 1)'}
 
-case_dict = {0:'confirmed', 1:'recovered',
-              2:'deceased', 3:'active'}
+case_dict = {0:'confirmed', 1:'vaccinated', 2:'deceased'}
 
 
 def hue(c, h=0.2):
@@ -60,37 +59,37 @@ def fix_date(x):
   return f'20{y}-{"{0:0=2d}".format(int(m))}-{"{0:0=2d}".format(int(d))}'
 
 
-def date_wise(df):
+def date_wise(df, flag=0):
   df = pd.DataFrame(df.reset_index()).iloc[1:].rename(columns={'index':'Date', 0:'Value'})
-  df['Date'] = [fix_date(x) for x in df.Date]
+  df['Date'] = [x for x in df.Date]
+  # else:
+  #   df['Date'] = [fix_date(x) for x in df.Date]
   return df
 
 
-def for_map(a,b,c,d, flag='none'):
+def for_map(a,b,c, flag='none'):
   last = a.columns[-1]
   a = a[['Country', last]].rename(columns={last:'Confirmed'})
-  b = b[['Country', last]].rename(columns={last:'Recovered'})
+  b = b[['Country', last]].rename(columns={last:'vaccinated'})
   c = c[['Country', last]].rename(columns={last:'Deaths'})
-  d = d[['Country', last]].rename(columns={last:'Active'})
   df = pd.merge(a, b, how='inner', on='Country')
   df = pd.merge(df, c, how='inner', on='Country')
-  df = pd.merge(df, d, how='inner', on='Country')
 
   if flag=='top':
     return df
 
-  idx = df[df['Country'] == 'US'].index[0]
-  temp = df.loc[idx].values
-  temp[2], temp[4] = 'data not available', 'data not available'
-  df.loc[idx] = temp
+  # idx = df[df['Country'] == 'US'].index[0]
+  # temp = df.loc[idx].values
+  # temp[2], temp[4] = 'data not available', 'data not available'
+  # df.loc[idx] = temp
 
   for col in df.columns:
     df[col] = df[col].astype(str)
 
-  df['text'] = 'Confirmed cases in ' + df['Country'] + '<br>' + 'Recovered: ' + \
-                  df['Recovered'] + '<br>' + 'Deaths: ' + df['Deaths'] + '<br>' + 'Active: ' + df['Active']
+  df['text'] = 'Confirmed cases in ' + df['Country'] + '<br>' + 'vaccinated: ' + \
+                  df['vaccinated'] + '<br>' + 'Deaths: ' + df['Deaths'] + '<br>'
 
-  df.drop(columns=['Recovered','Deaths','Active'], inplace=True)
+  df.drop(columns=['vaccinated','Deaths'], inplace=True)
 
   df['iso_code'] = get_alpha_iso(df)
 
@@ -119,10 +118,8 @@ def create_sunburst(df, feature):
     title = f'Sunburst plot for global {feature.lower()} cases'
     if feature=='Confirmed':
         cc='purple'
-    elif feature=='Recovered':
+    elif feature=='vaccinated':
         cc='green'
-    elif feature == 'Active':
-        cc = 'yellow'
     else:
         cc='red'
     fig = px.sunburst(df, path=['Continent', 'Country'], values=feature, title=title,
@@ -151,9 +148,8 @@ def create_global_bar(df_top, top=10, by='Confirmed', order='highest', cnt_name=
     df_top = df_top.sort_values(by=by, ascending=bool_).iloc[:top]
 
     fig_global_bar = go.Figure(data=[go.Bar(x=df_top['Country'], y=df_top['Confirmed'], name='confirmed cases', marker_color=color_dict[0]),
-                      go.Bar(x=df_top['Country'], y=df_top['Recovered'], name='recovered cases', marker_color=color_dict[1]),
-                      go.Bar(x=df_top['Country'], y=df_top['Deaths'], name='deaths', marker_color=color_dict[2]),
-                      go.Bar(x=df_top['Country'], y=df_top['Active'], name='active cases', marker_color=color_dict[3]),
+                      go.Bar(x=df_top['Country'], y=df_top['vaccinated'], name='vaccinated cases', marker_color=color_dict[1]),
+                      go.Bar(x=df_top['Country'], y=df_top['Deaths'], name='deaths', marker_color=color_dict[2])
                       ], layout=go.Layout(template='plotly_dark'))
 
     fig_global_bar.update_layout(title_text=f"{title}", barmode=barmode, hovermode=hovermode,
@@ -242,6 +238,7 @@ def confirm_daily(confirmed, c=0, cntry_name='#'):
     color = color_dict[c]
     daily_confirmed = confirmed.iloc[:-1].copy()
     daily_confirmed['Value'] = confirmed.iloc[1:].Value.values - confirmed.iloc[:-1].Value.values
+    daily_confirmed = daily_confirmed[daily_confirmed['Value']>=0]
 
     fig = go.Figure(go.Bar(x=daily_confirmed['Date'], y=daily_confirmed['Value']),
                     layout=go.Layout(template='plotly_dark'))
@@ -288,10 +285,10 @@ def confirm_rate(confirmed, c=0, cntry_name='#'):
     case_type = case_dict[c]
     if cntry_name == '#':
         title = f'Rate of {case_type} cases in the world'
-        confirmed = date_wise(confirmed.sum(axis=0))
+        confirmed = date_wise(confirmed.sum(axis=0)).iloc[132:]
     else:
         title = f'Rate of {case_type} cases in {cntry_name}'
-        confirmed = date_wise(confirmed[confirmed['Country'] == cntry_name].sum(axis=0))
+        confirmed = date_wise(confirmed[confirmed['Country'] == cntry_name].sum(axis=0)).iloc[132:]
 
     color = color_dict[c]
     daily_confirmed = confirmed.iloc[:-1].copy()
